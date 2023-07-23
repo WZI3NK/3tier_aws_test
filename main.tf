@@ -116,3 +116,12 @@ resource "aws_autoscaling_group" "example" {
 output "elb_dns_name" {
   value = "${aws_elb.example.dns_name}"
 }
+
+resource "aws_elb" "example" {
+  # ...
+}
+
+resource "aws_security_group" "db" {
+  # ...
+}
+
