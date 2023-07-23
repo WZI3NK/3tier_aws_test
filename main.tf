@@ -42,6 +42,14 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+resource "aws_instance" "example" {
+  ami           = "ami-0c94855ba95c574c8"
+  instance_type = "t2.micro"
+  vpc_security_group_ids = [aws_security_group.web.id]
+  subnet_id     = aws_subnet.public.id
+}
+
+
 # Create a security group to allow web traffic
 resource "aws_security_group" "web" {
   vpc_id = aws_vpc.main.id
