@@ -61,20 +61,10 @@ resource "aws_security_group" "web" {
   }
 }
 
-# Create an RDS instance in the private subnet
-resource "aws_db_instance" "default" {
-  allocated_storage    = 20
-  engine               = "mysql"
-  engine_version       = "5.7"
-  instance_class       = "db.t2.micro"
-  name                 = "dbname"
-  username             = "admin"
-  password             = "adminpassword" # Do not hardcode passwords in production environments
-  parameter_group_name = "default.mysql5.7"
-  vpc_security_group_ids = [aws_security_group.db.id]
-  publicly_accessible = false
-  subnet_group_name = aws_db_subnet_group.default.name
-  multi_az = true # Enable Multi-AZ for high availability
+# Create a security group for the DB
+resource "aws_security_group" "db" {
+  vpc_id = aws_vpc.main.id
+  # Configure your security group as necessary
 }
 
 # Create a subnet group for RDS instance
@@ -85,6 +75,22 @@ resource "aws_db_subnet_group" "default" {
   tags = {
     Name = "My DB subnet group"
   }
+}
+
+# Create an RDS instance in the private subnet
+resource "aws_db_instance" "default" {
+  allocated_storage    = 20
+  engine               = "mysql"
+  engine_version       = "5.7"
+  instance_class       = "db.t2.micro"
+  identifier           = "dbname"
+  username             = "admin"
+  password             = "adminpassword" # Do not hardcode passwords in production environments
+  parameter_group_name = "default.mysql5.7"
+  vpc_security_group_ids = [aws_security_group.db.id]
+  publicly_accessible = false
+  db_subnet_group_name = aws_db_subnet_group.default.name
+  multi_az = true # Enable Multi-AZ for high availability
 }
 
 # Create a launch configuration
@@ -117,11 +123,33 @@ output "elb_dns_name" {
   value = "${aws_elb.example.dns_name}"
 }
 
+# Define the AWS ELB
 resource "aws_elb" "example" {
-  # ...
-}
+  name               = "example-elb"
+  subnets            = [aws_subnet.public.id]
 
-resource "aws_security_group" "db" {
-  # ...
-}
+  listener {
+    instance_port     = 80
+    instance_protocol = "http"
+    lb_port           = 80
+    lb_protocol       = "http"
+  }
 
+  health_check {
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 3
+    target              = "HTTP:80/"
+    interval            = 30
+  }
+
+  instances                   = [aws_instance.example.id]
+  cross_zone_load_balancing   = true
+  idle_timeout                = 400
+  connection_draining         = true
+  connection_draining_timeout = 400
+
+  tags = {
+    Name = "example"
+  }
+}
